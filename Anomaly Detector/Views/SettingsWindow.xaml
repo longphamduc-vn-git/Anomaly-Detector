@@ -1,0 +1,98 @@
+﻿<Window x:Class="Anomaly_Detector.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Anomaly_Detector.ViewModels"
+        Title="Settings" Height="700" Width="900">
+    <Window.DataContext>
+        <vm:SettingsViewModel/>
+    </Window.DataContext>
+    <DockPanel>
+        <TabControl DockPanel.Dock="Top">
+            <!-- Cameras Tab -->
+            <TabItem Header="Cameras">
+                <Grid Margin="10">
+                    <StackPanel>
+                        <DataGrid ItemsSource="{Binding ApplicationSettings.Cameras}" AutoGenerateColumns="False" Height="150"  MouseDoubleClick="CameraItem_DoubleClick"  >
+                            <DataGrid.Resources>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Background" Value="{Binding ConnectionColor}"/>
+                                </Style>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Camera Index" Binding="{Binding CameraIndex}" Width="*"/>
+                                <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
+                                <DataGridTextColumn Header="Standard Image Path" Binding="{Binding StandardImagePath}" Width="2*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Content="Add Camera" Command="{Binding AddCameraCommand}" Width="100" Margin="0,0,10,0"/>
+                            <Button Content="Remove Camera" Width="100" Margin="0,0,10,0"/>
+                            <Button Content="Check Camera" Command="{Binding CheckCameraConnectionCommand}" Width="100" Margin="0,0,10,0"/>
+                            <Button Content="Capture Standard Image" Command="{Binding CaptureStandardImageCommand}" Width="150"/>
+                        </StackPanel>
+
+                        <!-- Display captured image -->
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- PLC Tab (unchanged) -->
+            <TabItem Header="PLC">
+                <Grid Margin="10">
+                    <StackPanel>
+                        <TextBlock Text="PLC IP Address:"/>
+                        <TextBox Text="{Binding ApplicationSettings.PLCConfiguration.IPAddress}" Width="200"/>
+                        <TextBlock Text="PLC Port:" Margin="0,10,0,0"/>
+                        <TextBox Text="{Binding ApplicationSettings.PLCConfiguration.Port}" Width="200"/>
+                        <TextBlock Text="PLC Unit ID:" Margin="0,10,0,0"/>
+                        <TextBox Text="{Binding ApplicationSettings.PLCConfiguration.UnitID}" Width="200"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Content="Register PLC Endpoints" Command="{Binding RegisterPLCEndpointsCommand}" Width="200" Margin="0,0,10,0"/>
+                            <Button Content="Register PLC Startpoints" Command="{Binding CheckPLCConnectionCommand}" Width="200"/>
+                            <Button Content="Check PLC" Command="{Binding CheckPLCConnectionCommand}" Width="200"/>
+
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- Image Processing Tab (unchanged) -->
+            <TabItem Header="Image Processing">
+                <Grid Margin="10">
+                    <StackPanel>
+                        <TextBlock Text="Image Storage Path:"/>
+                        <TextBox Text="{Binding ApplicationSettings.ImageStoragePath}" Width="300"/>
+                        <StackPanel Orientation="Horizontal"/>
+                        <GroupBox Header="Preprocessing Steps" Margin="0,20,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="66*"/>
+                                    <ColumnDefinition Width="365*"/>
+                                </Grid.ColumnDefinitions>
+                                <DataGrid ItemsSource="{Binding ApplicationSettings.PreprocessingSteps}" AutoGenerateColumns="False" Height="150" Grid.ColumnSpan="2" Margin="0,20,0,20">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Order" Binding="{Binding Order}" Width="50"/>
+                                        <DataGridTextColumn Header="Step Name" Binding="{Binding StepName}" Width="*"/>
+                                        <DataGridTextColumn Header="Parameters" Binding="{Binding Parameters}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,160,0,0" Grid.Column="1">
+                                    <Button Content="Add Step" Command="{Binding AddPreprocessingStepCommand}" Margin="5"/>
+                                    <Button Content="Remove Step" Command="{Binding RemovePreprocessingStepCommand}" Margin="5"/>
+                                    <Button Content="Previous" Margin="5"/>
+                                    <Button Content="Next" Margin="5"/>
+                                </StackPanel>
+                            </Grid>
+                        </GroupBox>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
+        <!-- Save Settings Button at the bottom -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}" Width="150"/>
+        </StackPanel>
+    </DockPanel>
+</Window>
