@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Emgu.CV.Structure;
 using Emgu.CV;
 using System.Windows.Media;
+using System.Windows;
+using System.IO;
 
 namespace Anomaly_Detector.ViewModels
 {
@@ -13,20 +15,48 @@ namespace Anomaly_Detector.ViewModels
     {
         private CameraService _cameraService;
         private ImageSource _cameraFeedImage;
-        private BitmapImage _capturedImage;
-        private CameraModel _camera;
-
-        // Commands
-        public ICommand CaptureImageCommand { get; private set; }
-        public ICommand DeleteImageCommand { get; private set; }
-
-        // Parameterless constructor for XAML instantiation
-        public CameraWindowViewModel()
+        private string _capturedImagePath;
+        public CameraModel _camera;
+        private bool _isCaptured = false;
+        public ApplicationSettings ApplicationSettings { get; set; }
+        public ICommand CaptureImageCommand { get; set; }
+        public ICommand DeleteImageCommand { get; set; }
+        public ICommand CloseWindowCommand { get; set; }
+        private ApplicationSettings LoadSettings()
         {
-            InitializeCommands();
+            var jsonService = new JsonDatabaseService<ApplicationSettings>("settings.json");
+            return jsonService.LoadData() ?? new ApplicationSettings();  // Default settings if not found
+        }
+        private void CloseWindow(object parameter)
+        {
+            try
+            {
+                if (parameter is Window window)
+                {
+                    // Lưu cài đặt
+                    var jsonService = new JsonDatabaseService<ApplicationSettings>("settings.json");
+                    jsonService.SaveData(ApplicationSettings);
+
+                    window.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving settings: {ex.Message}");
+            }
         }
 
-        // Method to initialize the camera after instantiation
+
+
+        public CameraWindowViewModel()
+        {
+            ApplicationSettings = LoadSettings(); // Load saved settings from a file
+
+            CaptureImageCommand = new RelayCommand(CaptureImage);
+            DeleteImageCommand = new RelayCommand(DeleteImage);
+            CloseWindowCommand = new RelayCommand(CloseWindow);
+        }
+
         public void InitializeCamera(CameraModel camera)
         {
             _camera = camera;
@@ -34,47 +64,61 @@ namespace Anomaly_Detector.ViewModels
             StartCameraFeed();
         }
 
-        #region Properties
-
         public ImageSource CameraFeedImage
         {
             get => _cameraFeedImage;
             set
             {
                 _cameraFeedImage = value;
-                OnPropertyChanged(nameof(CameraFeedImage));
+                OnPropertyChanged();
             }
         }
 
-        #endregion
 
-        #region Methods
+
+        private void SaveImageSourceToFile(ImageSource imageSource, string filePath)
+        {
+            // Ensure the image source is a BitmapSource
+            BitmapSource bitmapSource = imageSource as BitmapSource;
+            if (bitmapSource == null)
+            {
+                throw new ArgumentException("The provided ImageSource is not a BitmapSource.");
+            }
+
+            // Encode the image to the desired format (e.g., PNG)
+            BitmapEncoder encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+
+            // Save the image to the specified file path
+            using (FileStream fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                encoder.Save(fileStream);
+            }
+        }
+
 
         private async void StartCameraFeed()
         {
-            // Continuously capture frames from the camera and display them
             while (true)
             {
-                var frame = await Task.Run(() => _cameraService.GetCurrentFrame());
-                if (frame != null)
+                if (!_isCaptured)
                 {
-                    CameraFeedImage = frame.ToBitmapSource(); // Display the frame
+                    var frame = await Task.Run(() => _cameraService.GetCurrentFrame());
+                    if (frame != null)
+                    {
+                        CameraFeedImage = frame.ToBitmapSource();
+                    }
                 }
-                await Task.Delay(100); // Add a slight delay for smooth frame rendering
+                await Task.Delay(100);
             }
         }
 
-  
-
         private void CaptureImage(object parameter)
         {
-            if (_capturedImage != null)
-            {
-                var filePath = $"Captured_{DateTime.Now.Ticks}.jpg";
-                _cameraService.SaveImage(_capturedImage, filePath); // Save the captured image
-                _capturedImage = null; // Reset after capture
-                CameraFeedImage = null; // Reset displayed image
-            }
+            _isCaptured = true;
+            string CapturedImagePath = $"{ApplicationSettings.ImageStoragePath}\\{_camera.Description}_{DateTime.Now.Ticks}.jpg";
+            SaveImageSourceToFile(CameraFeedImage, CapturedImagePath);
+            _isCaptured = false;
         }
 
         private void DeleteImage(object parameter)
@@ -82,7 +126,6 @@ namespace Anomaly_Detector.ViewModels
             CameraFeedImage = null; // Clear the display
         }
 
-        #endregion
 
         #region Command Initialization
 
@@ -93,5 +136,6 @@ namespace Anomaly_Detector.ViewModels
         }
 
         #endregion
+
     }
 }
