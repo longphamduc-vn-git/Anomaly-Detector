@@ -6,48 +6,28 @@ using System.Windows.Media.Imaging;
 namespace Anomaly_Detector.Models
 {
     /// <summary>
-    /// Represents an image used in the anomaly detection system.
-    /// This class stores image metadata and provides property change notifications.
+    /// Represents an image, including properties such as file path, comparison score, and the loaded image.
     /// </summary>
     public class ImageModel : INotifyPropertyChanged
     {
-        private string? _filePath;
+        private string _filePath;
         private double _comparisonScore;
-        private string? _comparisonResult;
-        private BitmapImage? _image;
-        private bool _isStandardImage;
-        private string _title;
+        private BitmapImage _image;
+        private string _comparisonResult;
 
         /// <summary>
         /// Gets or sets the file path of the image.
         /// </summary>
-        public string? FilePath
+        public string FilePath
         {
             get => _filePath;
             set
             {
                 _filePath = value;
                 OnPropertyChanged(nameof(FilePath));
+                LoadImage(); // Automatically load the image when the file path is set
             }
         }
-
-        /// <summary>
-        /// Gets the image loaded from the file path.
-        /// </summary>
-        public BitmapImage? Image
-        {
-            get => _image;
-            private set
-            {
-                _image = value;
-                OnPropertyChanged(nameof(Image));
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the timestamp when the image was captured or processed.
-        /// </summary>
-        public DateTime Timestamp { get; set; } = DateTime.Now;
 
         /// <summary>
         /// Gets or sets the comparison score (used for anomaly detection).
@@ -65,7 +45,7 @@ namespace Anomaly_Detector.Models
         /// <summary>
         /// Gets or sets the comparison result (e.g., "Normal", "Anomaly").
         /// </summary>
-        public string? ComparisonResult
+        public string ComparisonResult
         {
             get => _comparisonResult;
             set
@@ -76,35 +56,45 @@ namespace Anomaly_Detector.Models
         }
 
         /// <summary>
-        /// Gets or sets a flag to determine if this image is the standard or target image.
+        /// Gets or sets the loaded image.
         /// </summary>
-        public bool IsStandardImage
+        public BitmapImage Image
         {
-            get => _isStandardImage;
-            set
+            get => _image;
+            private set
             {
-                _isStandardImage = value;
-                OnPropertyChanged(nameof(IsStandardImage));
+                _image = value;
+                OnPropertyChanged(nameof(Image));
             }
         }
 
         /// <summary>
-        /// Gets or sets the title or description of the image.
+        /// Loads the image from the file path.
         /// </summary>
-        public string Title
+        private void LoadImage()
         {
-            get => _title;
-            set
+            if (!string.IsNullOrEmpty(FilePath) && File.Exists(FilePath))
             {
-                _title = value;
-                OnPropertyChanged(nameof(Title));
+                try
+                {
+                    BitmapImage bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.UriSource = new Uri(FilePath, UriKind.Absolute);
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.EndInit();
+                    Image = bitmap;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading image: {ex.Message}");
+                }
             }
         }
 
         /// <summary>
         /// Notifies UI when a property changes.
         /// </summary>
-        public event PropertyChangedEventHandler? PropertyChanged;
+        public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

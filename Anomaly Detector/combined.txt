@@ -120,58 +120,195 @@ namespace Anomaly_Detector.Models
         public ObservableCollection<PreprocessingStep> PreprocessingSteps { get; set; } = new ObservableCollection<PreprocessingStep>();
     }
 }
+using System;
 using System.ComponentModel;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace Anomaly_Detector.Models
 {
     /// <summary>
-    /// Represents a camera configuration, including properties such as the camera's index, 
-    /// IP address, port, description, threshold, and connection status.
-    /// It implements INotifyPropertyChanged to notify the UI of any property changes.
-    /// This class is used for managing individual camera configurations in the anomaly detection system.
+    /// Represents a camera configuration.
     /// </summary>
     public class CameraModel : INotifyPropertyChanged
     {
-        // Unique identifier for the camera, used to track each camera in the system
-        public int CameraIndex { get; set; }
-
-        // IP address of the camera, used for network communication
-        public string? IPAddress { get; set; }
-
-        // Port number for communication with the camera
-        public int? Port { get; set; }
-
-        // Description of the camera, usually shown in the UI
-        public string? Description { get; set; } = "New Camera";
-
-        // Property to store the threshold value for anomaly detection, 
-        // used to compare camera frames or sensor data for detecting anomalies
+        private string _filePath;
         private double _threshold;
+        private bool _isConnected;
+
+        // Arrays of ImageModel objects for target and standard images
+        public ImageModel[] TargetImages { get; set; }
+        public ImageModel[] StandardImages { get; set; }
+
+        public int CameraIndex { get; set; }
+        public string? IPAddress { get; set; }
+        public int? Port { get; set; }
+        public string? Description { get; set; } = string.Empty;
+
+        // Threshold for anomaly detection (e.g., used for comparing frames)
         public double Threshold
         {
             get => _threshold;
-            set { _threshold = value; OnPropertyChanged(nameof(Threshold)); }
+            set
+            {
+                _threshold = value;
+                OnPropertyChanged(nameof(Threshold));
+            }
         }
 
-        // Flag to indicate whether the camera is currently connected or not
-        // This property helps the UI show the connection status of the camera
-        private bool _isConnected;
+        // Connection status flag for the camera
         public bool IsConnected
         {
             get => _isConnected;
-            set { _isConnected = value; OnPropertyChanged(nameof(IsConnected)); }
+            set
+            {
+                _isConnected = value;
+                OnPropertyChanged(nameof(IsConnected));
+            }
         }
 
-        // Event to notify the UI about property changes, ensuring the UI is updated when properties change
-        public event PropertyChangedEventHandler? PropertyChanged;
+        // Timestamp of when the camera or its images were captured or processed
+        public DateTime Timestamp { get; set; } = DateTime.Now;
 
-        // Method to raise the PropertyChanged event for a given property name
-        // This method ensures that when a property changes, the UI is notified and can refresh accordingly
-        protected void OnPropertyChanged(string propName)
+        // Event for property change notifications
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        // Method to trigger property change notifications
+        protected void OnPropertyChanged(string propertyName)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        // Constructor to initialize CameraModel with empty arrays for target and standard images
+        public CameraModel()
+        {
+            TargetImages = new ImageModel[0]; // Empty array initially
+            StandardImages = new ImageModel[0]; // Empty array initially
+        }
+
+        // Add a target image to the TargetImages array
+        public void AddTargetImage(string filePath)
+        {
+            var imageModel = new ImageModel { FilePath = filePath };
+            //AddImageToArray(ref TargetImages, imageModel);
+        }
+
+        // Add a standard image to the StandardImages array
+        public void AddStandardImage(string filePath)
+        {
+            var imageModel = new ImageModel { FilePath = filePath };
+            //AddImageToArray(ref StandardImages, imageModel);
+        }
+
+        // Helper method to add an image to the image array
+        private void AddImageToArray(ref ImageModel[] imageArray, ImageModel imageModel)
+        {
+            var newArray = new ImageModel[imageArray.Length + 1];
+            Array.Copy(imageArray, newArray, imageArray.Length);
+            newArray[imageArray.Length] = imageModel;
+            imageArray = newArray;
+        }
+    }
+}
+using System;
+using System.ComponentModel;
+using System.IO;
+using System.Windows.Media.Imaging;
+
+namespace Anomaly_Detector.Models
+{
+    /// <summary>
+    /// Represents an image, including properties such as file path, comparison score, and the loaded image.
+    /// </summary>
+    public class ImageModel : INotifyPropertyChanged
+    {
+        private string _filePath;
+        private double _comparisonScore;
+        private BitmapImage _image;
+        private string _comparisonResult;
+
+        /// <summary>
+        /// Gets or sets the file path of the image.
+        /// </summary>
+        public string FilePath
+        {
+            get => _filePath;
+            set
+            {
+                _filePath = value;
+                OnPropertyChanged(nameof(FilePath));
+                LoadImage(); // Automatically load the image when the file path is set
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the comparison score (used for anomaly detection).
+        /// </summary>
+        public double ComparisonScore
+        {
+            get => _comparisonScore;
+            set
+            {
+                _comparisonScore = value;
+                OnPropertyChanged(nameof(ComparisonScore));
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the comparison result (e.g., "Normal", "Anomaly").
+        /// </summary>
+        public string ComparisonResult
+        {
+            get => _comparisonResult;
+            set
+            {
+                _comparisonResult = value;
+                OnPropertyChanged(nameof(ComparisonResult));
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the loaded image.
+        /// </summary>
+        public BitmapImage Image
+        {
+            get => _image;
+            private set
+            {
+                _image = value;
+                OnPropertyChanged(nameof(Image));
+            }
+        }
+
+        /// <summary>
+        /// Loads the image from the file path.
+        /// </summary>
+        private void LoadImage()
+        {
+            if (!string.IsNullOrEmpty(FilePath) && File.Exists(FilePath))
+            {
+                try
+                {
+                    BitmapImage bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.UriSource = new Uri(FilePath, UriKind.Absolute);
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.EndInit();
+                    Image = bitmap;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading image: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Notifies UI when a property changes.
+        /// </summary>
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }
@@ -254,89 +391,41 @@ namespace Anomaly_Detector.Models
         public int Order { get; set; }
     }
 }
-using System;
 using Emgu.CV;
 using Emgu.CV.Structure;
+using System;
+using System.IO;
+using System.Windows.Media.Imaging;
 
 namespace Anomaly_Detector.Services
 {
-    /// <summary>
-    /// Provides methods to manage a camera connection and retrieve frames using Emgu.CV.
-    /// </summary>
     public class CameraService : IDisposable
     {
-        private VideoCapture? _capture;
+        private VideoCapture _capture;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CameraService"/> class.
-        /// Connects to the specified camera by index (default is 0).
-        /// </summary>
-        /// <param name="cameraIndex">The index of the camera to connect to. Default is 0.</param>
         public CameraService(int cameraIndex = 0)
         {
-            try
+            _capture = new VideoCapture(cameraIndex);
+            if (!_capture.IsOpened)
             {
-                _capture = new VideoCapture(cameraIndex);
-                if (!_capture.IsOpened)
-                {
-                    throw new Exception("Unable to open the camera.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error initializing camera: {ex.Message}");
+                throw new Exception("Unable to open the camera.");
             }
         }
 
-        /// <summary>
-        /// Captures and returns the current frame from the camera.
-        /// </summary>
-        /// <returns>
-        /// An <see cref="Image{Bgr, byte}"/> representing the current frame,
-        /// or <c>null</c> if the frame could not be captured.
-        /// </returns>
         public Image<Bgr, byte>? GetCurrentFrame()
         {
-            if (_capture == null)
-            {
-                Console.WriteLine("Camera is not initialized.");
-                return null;
-            }
-
-            try
-            {
-                var frameMat = _capture.QueryFrame();
-                if (frameMat != null)
-                {
-                    return frameMat.ToImage<Bgr, byte>();
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error capturing frame: {ex.Message}");
-                return null;
-            }
+            var frameMat = _capture?.QueryFrame();
+            return frameMat?.ToImage<Bgr, byte>();
         }
 
-        /// <summary>
-        /// Releases the camera resources.
-        /// </summary>
-        public void Release()
+        public void SaveImage(BitmapImage image, string filePath)
         {
-            if (_capture != null)
-            {
-                _capture.Dispose();
-                _capture = null;
-            }
+            image.ToMat().ToImage<Bgr, byte>().Save(filePath);
         }
 
-        /// <summary>
-        /// Releases all resources used by the <see cref="CameraService"/>.
-        /// </summary>
         public void Dispose()
         {
-            Release();
+            _capture?.Dispose();
         }
     }
 }
@@ -869,6 +958,114 @@ namespace Anomaly_Detector.ViewModels
 }
 using Anomaly_Detector.Models;
 using Anomaly_Detector.Services;
+using System.Windows.Media.Imaging;
+using System.Windows.Input;
+using System.Threading.Tasks;
+using Emgu.CV.Structure;
+using Emgu.CV;
+
+namespace Anomaly_Detector.ViewModels
+{
+    public class CameraWindowViewModel : BaseViewModel
+    {
+        private CameraService _cameraService;
+        private BitmapImage _cameraFeedImage;
+        private BitmapImage _capturedImage;
+        private CameraModel _camera;
+
+        // Commands
+        public ICommand CaptureImageCommand { get; private set; }
+        public ICommand DeleteImageCommand { get; private set; }
+
+        // Parameterless constructor for XAML instantiation
+        public CameraWindowViewModel()
+        {
+            InitializeCommands();
+        }
+
+        // Method to initialize the camera after instantiation
+        public void InitializeCamera(CameraModel camera)
+        {
+            _camera = camera;
+            _cameraService = new CameraService(camera.CameraIndex);
+            StartCameraFeed();
+        }
+
+        #region Properties
+
+        public BitmapImage CameraFeedImage
+        {
+            get => _cameraFeedImage;
+            set
+            {
+                _cameraFeedImage = value;
+                OnPropertyChanged(nameof(CameraFeedImage));
+            }
+        }
+
+        #endregion
+
+        #region Methods
+
+        private async void StartCameraFeed()
+        {
+            // Continuously capture frames from the camera and display them
+            while (true)
+            {
+                var frame = await Task.Run(() => _cameraService.GetCurrentFrame());
+                if (frame != null)
+                {
+                    CameraFeedImage = ConvertToBitmapImage(frame);
+                }
+                await Task.Delay(100); // Add a slight delay for smooth frame rendering
+            }
+        }
+
+        private BitmapImage ConvertToBitmapImage(Image<Bgr, byte> frame)
+        {
+            var bitmapImage = new BitmapImage();
+            using (var memoryStream = new System.IO.MemoryStream())
+            {
+                frame.ToBitmap().Save(memoryStream, System.Drawing.Imaging.ImageFormat.Bmp);
+                memoryStream.Seek(0, System.IO.SeekOrigin.Begin);
+                bitmapImage.BeginInit();
+                bitmapImage.StreamSource = memoryStream;
+                bitmapImage.EndInit();
+            }
+            return bitmapImage;
+        }
+
+        private void CaptureImage(object parameter)
+        {
+            if (_capturedImage != null)
+            {
+                var filePath = $"Captured_{DateTime.Now.Ticks}.jpg";
+                _cameraService.SaveImage(_capturedImage, filePath); // Save the captured image
+                _capturedImage = null; // Reset after capture
+                CameraFeedImage = null; // Reset displayed image
+            }
+        }
+
+        private void DeleteImage(object parameter)
+        {
+            CameraFeedImage = null; // Clear the display
+        }
+
+        #endregion
+
+        #region Command Initialization
+
+        private void InitializeCommands()
+        {
+            CaptureImageCommand = new RelayCommand(CaptureImage);
+            DeleteImageCommand = new RelayCommand(DeleteImage);
+        }
+
+        #endregion
+    }
+}
+using Anomaly_Detector.Models;
+using Anomaly_Detector.Services;
 using Emgu.CV;
 
 using System;
@@ -1199,6 +1396,61 @@ namespace Anomaly_Detector.ViewModels
         #endregion
     }
 }
+<Window x:Class="Anomaly_Detector.Views.CameraWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Anomaly_Detector.ViewModels"
+        Title="Camera Feed" Height="450" Width="800">
+
+    <Window.DataContext>
+        <vm:CameraWindowViewModel />
+    </Window.DataContext>
+
+    <Grid>
+        <!-- Camera feed image -->
+        <Image Source="{Binding CameraFeedImage}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="640" Height="480" />
+
+        <!-- Button to capture the image -->
+        <Button Content="Capture Image" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{Binding CaptureImageCommand}" Margin="10" Width="120"/>
+
+        <!-- Button to delete the captured image -->
+        <Button Content="Delete Image" HorizontalAlignment="Right" VerticalAlignment="Bottom" Command="{Binding DeleteImageCommand}" Margin="10" Width="120"/>
+    </Grid>
+</Window>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using Anomaly_Detector.Models;
+using Anomaly_Detector.ViewModels;
+
+namespace Anomaly_Detector.Views
+{
+    /// <summary>
+    /// Interaction logic for CameraWindow.xaml
+    /// </summary>
+    public partial class CameraWindow : Window
+    {
+        public CameraWindow(CameraModel camera)
+        {
+            InitializeComponent();
+
+            // Access the ViewModel and initialize the camera
+            var viewModel = (CameraWindowViewModel)DataContext;
+            viewModel.InitializeCamera(camera); // Set the camera model
+        }
+    }
+
+}
 <Window x:Class="Anomaly_Detector.Views.MonitorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -1329,7 +1581,7 @@ namespace Anomaly_Detector.Views
                                 <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
-                                <DataGridTextColumn Header="Standard Image Path" Binding="{Binding StandardImagePath}" Width="2*"/>
+                                <DataGridTextColumn Header="Standard Image Path" Binding="{Binding StandardImages[0].FilePath}" Width="2*"/>
                             </DataGrid.Columns>
                         </DataGrid>
                         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
@@ -1628,71 +1880,92 @@ namespace Anomaly_Detector.Models
         public ObservableCollection<PreprocessingStep> PreprocessingSteps { get; set; } = new ObservableCollection<PreprocessingStep>();
     }
 }
+using System;
 using System.ComponentModel;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace Anomaly_Detector.Models
 {
     /// <summary>
-    /// Represents a camera configuration, including properties such as the camera's index, 
-    /// IP address, port, description, threshold, and connection status.
-    /// It implements INotifyPropertyChanged to notify the UI of any property changes.
-    /// This class is used for managing individual camera configurations in the anomaly detection system.
+    /// Represents a camera configuration.
     /// </summary>
     public class CameraModel : INotifyPropertyChanged
     {
-        // Unique identifier for the camera, used to track each camera in the system
-        public int CameraIndex { get; set; }
-
-        // IP address of the camera, used for network communication
-        public string? IPAddress { get; set; }
-
-        // Port number for communication with the camera
-        public int? Port { get; set; }
-
-        // Description of the camera, usually shown in the UI
-        public string? Description { get; set; } = "New Camera";
-
-        // Property to store the threshold value for anomaly detection, 
-        // used to compare camera frames or sensor data for detecting anomalies
+        private string _filePath;
         private double _threshold;
-        public double Threshold
-        {
-            get => _threshold;
-            set { _threshold = value; OnPropertyChanged(nameof(Threshold)); }
-        }
-
-        // Flag to indicate whether the camera is currently connected or not
-        // This property helps the UI show the connection status of the camera
         private bool _isConnected;
-
-        
-
-        public bool IsConnected
-        {
-            get => _isConnected;
-            set { _isConnected = value; OnPropertyChanged(nameof(IsConnected)); }
-        }
 
         // Arrays of ImageModel objects for target and standard images
         public ImageModel[] TargetImages { get; set; }
         public ImageModel[] StandardImages { get; set; }
 
-        public CameraModel()
+        public int CameraIndex { get; set; }
+        public string? IPAddress { get; set; }
+        public int? Port { get; set; }
+        public string? Description { get; set; } = string.Empty;
+
+        // Threshold for anomaly detection (e.g., used for comparing frames)
+        public double Threshold
         {
-            TargetImages = new ImageModel[0];
-            StandardImages = new ImageModel[0];
+            get => _threshold;
+            set
+            {
+                _threshold = value;
+                OnPropertyChanged(nameof(Threshold));
+            }
         }
 
-        // Event to notify the UI about property changes, ensuring the UI is updated when properties change
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        // Method to raise the PropertyChanged event for a given property name
-        // This method ensures that when a property changes, the UI is notified and can refresh accordingly
-        protected void OnPropertyChanged(string propName)
+        // Connection status flag for the camera
+        public bool IsConnected
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+            get => _isConnected;
+            set
+            {
+                _isConnected = value;
+                OnPropertyChanged(nameof(IsConnected));
+            }
+        }
+
+        // Timestamp of when the camera or its images were captured or processed
+        public DateTime Timestamp { get; set; } = DateTime.Now;
+
+        // Event for property change notifications
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        // Method to trigger property change notifications
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        // Constructor to initialize CameraModel with empty arrays for target and standard images
+        public CameraModel()
+        {
+            TargetImages = new ImageModel[0]; // Empty array initially
+            StandardImages = new ImageModel[0]; // Empty array initially
+        }
+
+        // Add a target image to the TargetImages array
+        public void AddTargetImage(string filePath)
+        {
+            var imageModel = new ImageModel { FilePath = filePath };
+            //AddImageToArray(ref TargetImages, imageModel);
+        }
+
+        // Add a standard image to the StandardImages array
+        public void AddStandardImage(string filePath)
+        {
+            var imageModel = new ImageModel { FilePath = filePath };
+            //AddImageToArray(ref StandardImages, imageModel);
+        }
+
+        // Helper method to add an image to the image array
+        private void AddImageToArray(ref ImageModel[] imageArray, ImageModel imageModel)
+        {
+            var newArray = new ImageModel[imageArray.Length + 1];
+            Array.Copy(imageArray, newArray, imageArray.Length);
+            newArray[imageArray.Length] = imageModel;
+            imageArray = newArray;
         }
     }
 }
@@ -1704,49 +1977,28 @@ using System.Windows.Media.Imaging;
 namespace Anomaly_Detector.Models
 {
     /// <summary>
-    /// Represents an image used in the anomaly detection system.
-    /// This class stores image metadata and provides property change notifications.
+    /// Represents an image, including properties such as file path, comparison score, and the loaded image.
     /// </summary>
     public class ImageModel : INotifyPropertyChanged
     {
-        private string? _filePath;
+        private string _filePath;
         private double _comparisonScore;
-        private string? _comparisonResult;
-        private BitmapImage? _image;
-        private bool _isStandardImage;
-        private string _title;
+        private BitmapImage _image;
+        private string _comparisonResult;
 
         /// <summary>
         /// Gets or sets the file path of the image.
         /// </summary>
-        public string? FilePath
+        public string FilePath
         {
             get => _filePath;
             set
             {
                 _filePath = value;
                 OnPropertyChanged(nameof(FilePath));
-                LoadImage(); // Automatically load image when file path is set
+                LoadImage(); // Automatically load the image when the file path is set
             }
         }
-
-        /// <summary>
-        /// Gets the image loaded from the file path.
-        /// </summary>
-        public BitmapImage? Image
-        {
-            get => _image;
-            private set
-            {
-                _image = value;
-                OnPropertyChanged(nameof(Image));
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the timestamp when the image was captured or processed.
-        /// </summary>
-        public DateTime Timestamp { get; set; } = DateTime.Now;
 
         /// <summary>
         /// Gets or sets the comparison score (used for anomaly detection).
@@ -1764,7 +2016,7 @@ namespace Anomaly_Detector.Models
         /// <summary>
         /// Gets or sets the comparison result (e.g., "Normal", "Anomaly").
         /// </summary>
-        public string? ComparisonResult
+        public string ComparisonResult
         {
             get => _comparisonResult;
             set
@@ -1775,28 +2027,15 @@ namespace Anomaly_Detector.Models
         }
 
         /// <summary>
-        /// Gets or sets a flag to determine if this image is the standard or target image.
+        /// Gets or sets the loaded image.
         /// </summary>
-        public bool IsStandardImage
+        public BitmapImage Image
         {
-            get => _isStandardImage;
-            set
+            get => _image;
+            private set
             {
-                _isStandardImage = value;
-                OnPropertyChanged(nameof(IsStandardImage));
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the title or description of the image.
-        /// </summary>
-        public string Title
-        {
-            get => _title;
-            set
-            {
-                _title = value;
-                OnPropertyChanged(nameof(Title));
+                _image = value;
+                OnPropertyChanged(nameof(Image));
             }
         }
 
@@ -1826,7 +2065,7 @@ namespace Anomaly_Detector.Models
         /// <summary>
         /// Notifies UI when a property changes.
         /// </summary>
-        public event PropertyChangedEventHandler? PropertyChanged;
+        public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -1912,89 +2151,41 @@ namespace Anomaly_Detector.Models
         public int Order { get; set; }
     }
 }
-using System;
 using Emgu.CV;
 using Emgu.CV.Structure;
+using System;
+using System.IO;
+using System.Windows.Media.Imaging;
 
 namespace Anomaly_Detector.Services
 {
-    /// <summary>
-    /// Provides methods to manage a camera connection and retrieve frames using Emgu.CV.
-    /// </summary>
     public class CameraService : IDisposable
     {
-        private VideoCapture? _capture;
+        private VideoCapture _capture;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CameraService"/> class.
-        /// Connects to the specified camera by index (default is 0).
-        /// </summary>
-        /// <param name="cameraIndex">The index of the camera to connect to. Default is 0.</param>
         public CameraService(int cameraIndex = 0)
         {
-            try
+            _capture = new VideoCapture(cameraIndex);
+            if (!_capture.IsOpened)
             {
-                _capture = new VideoCapture(cameraIndex);
-                if (!_capture.IsOpened)
-                {
-                    throw new Exception("Unable to open the camera.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error initializing camera: {ex.Message}");
+                throw new Exception("Unable to open the camera.");
             }
         }
 
-        /// <summary>
-        /// Captures and returns the current frame from the camera.
-        /// </summary>
-        /// <returns>
-        /// An <see cref="Image{Bgr, byte}"/> representing the current frame,
-        /// or <c>null</c> if the frame could not be captured.
-        /// </returns>
         public Image<Bgr, byte>? GetCurrentFrame()
         {
-            if (_capture == null)
-            {
-                Console.WriteLine("Camera is not initialized.");
-                return null;
-            }
-
-            try
-            {
-                var frameMat = _capture.QueryFrame();
-                if (frameMat != null)
-                {
-                    return frameMat.ToImage<Bgr, byte>();
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error capturing frame: {ex.Message}");
-                return null;
-            }
+            var frameMat = _capture?.QueryFrame();
+            return frameMat?.ToImage<Bgr, byte>();
         }
 
-        /// <summary>
-        /// Releases the camera resources.
-        /// </summary>
-        public void Release()
+        public void SaveImage(BitmapImage image, string filePath)
         {
-            if (_capture != null)
-            {
-                _capture.Dispose();
-                _capture = null;
-            }
+            image.ToMat().ToImage<Bgr, byte>().Save(filePath);
         }
 
-        /// <summary>
-        /// Releases all resources used by the <see cref="CameraService"/>.
-        /// </summary>
         public void Dispose()
         {
-            Release();
+            _capture?.Dispose();
         }
     }
 }
@@ -2527,6 +2718,103 @@ namespace Anomaly_Detector.ViewModels
 }
 using Anomaly_Detector.Models;
 using Anomaly_Detector.Services;
+using System.Windows.Media.Imaging;
+using System.Windows.Input;
+using System.Threading.Tasks;
+using Emgu.CV.Structure;
+using Emgu.CV;
+using System.Windows.Media;
+
+namespace Anomaly_Detector.ViewModels
+{
+    public class CameraWindowViewModel : BaseViewModel
+    {
+        private CameraService _cameraService;
+        private ImageSource _cameraFeedImage;
+        private BitmapImage _capturedImage;
+        private CameraModel _camera;
+
+        // Commands
+        public ICommand CaptureImageCommand { get; private set; }
+        public ICommand DeleteImageCommand { get; private set; }
+
+        // Parameterless constructor for XAML instantiation
+        public CameraWindowViewModel()
+        {
+            InitializeCommands();
+        }
+
+        // Method to initialize the camera after instantiation
+        public void InitializeCamera(CameraModel camera)
+        {
+            _camera = camera;
+            _cameraService = new CameraService(camera.CameraIndex);
+            StartCameraFeed();
+        }
+
+        #region Properties
+
+        public ImageSource CameraFeedImage
+        {
+            get => _cameraFeedImage;
+            set
+            {
+                _cameraFeedImage = value;
+                OnPropertyChanged(nameof(CameraFeedImage));
+            }
+        }
+
+        #endregion
+
+        #region Methods
+
+        private async void StartCameraFeed()
+        {
+            // Continuously capture frames from the camera and display them
+            while (true)
+            {
+                var frame = await Task.Run(() => _cameraService.GetCurrentFrame());
+                if (frame != null)
+                {
+                    CameraFeedImage = frame.ToBitmapSource(); // Display the frame
+                }
+                await Task.Delay(100); // Add a slight delay for smooth frame rendering
+            }
+        }
+
+  
+
+        private void CaptureImage(object parameter)
+        {
+            if (_capturedImage != null)
+            {
+                var filePath = $"Captured_{DateTime.Now.Ticks}.jpg";
+                _cameraService.SaveImage(_capturedImage, filePath); // Save the captured image
+                _capturedImage = null; // Reset after capture
+                CameraFeedImage = null; // Reset displayed image
+            }
+        }
+
+        private void DeleteImage(object parameter)
+        {
+            CameraFeedImage = null; // Clear the display
+        }
+
+        #endregion
+
+        #region Command Initialization
+
+        private void InitializeCommands()
+        {
+            CaptureImageCommand = new RelayCommand(CaptureImage);
+            DeleteImageCommand = new RelayCommand(DeleteImage);
+        }
+
+        #endregion
+    }
+}
+using Anomaly_Detector.Models;
+using Anomaly_Detector.Services;
 using Emgu.CV;
 
 using System;
@@ -2857,6 +3145,63 @@ namespace Anomaly_Detector.ViewModels
         #endregion
     }
 }
+<Window x:Class="Anomaly_Detector.Views.CameraWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Anomaly_Detector.ViewModels"
+        Title="Camera Feed" Height="450" Width="800">
+
+    <Window.DataContext>
+        <vm:CameraWindowViewModel/>
+    </Window.DataContext>
+
+    <Grid>
+        <!-- Camera feed image -->
+        <Image Name="XX" Source="{Binding CameraFeedImage}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="640" Height="480" />
+
+        <!-- Button to capture the image -->
+        <Button Content="Capture Image" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{Binding CaptureImageCommand}" Margin="10" Width="120"/>
+
+        <!-- Button to delete the captured image -->
+        <Button Content="Delete Image" HorizontalAlignment="Right" VerticalAlignment="Bottom" Command="{Binding DeleteImageCommand}" Margin="10" Width="120"/>
+    </Grid>
+</Window>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using Anomaly_Detector.Models;
+using Anomaly_Detector.ViewModels;
+
+namespace Anomaly_Detector.Views
+{
+    /// <summary>
+    /// Interaction logic for CameraWindow.xaml
+    /// </summary>
+    public partial class CameraWindow : Window
+    {
+        public CameraWindow(CameraModel camera)
+        {
+            InitializeComponent();
+
+            // Access the ViewModel and initialize the camera
+            var viewModel = (CameraWindowViewModel)DataContext;
+            viewModel.InitializeCamera(camera); // Set the camera model
+            XX.Source = viewModel.CameraFeedImage; // Set the source of the image control
+
+        }
+    }
+
+}
 <Window x:Class="Anomaly_Detector.Views.MonitorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -2987,7 +3332,7 @@ namespace Anomaly_Detector.Views
                                 <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
-                                <DataGridTextColumn Header="Standard Image Path" Binding="{Binding StandardImagePath}" Width="2*"/>
+                                <DataGridTextColumn Header="Standard Image Path" Binding="{Binding StandardImages[0].FilePath}" Width="2*"/>
                             </DataGrid.Columns>
                         </DataGrid>
                         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">

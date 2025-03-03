@@ -12,15 +12,16 @@
             <TabItem Header="Cameras">
                 <Grid Margin="10">
                     <StackPanel>
-                        <DataGrid ItemsSource="{Binding ApplicationSettings.Cameras}" AutoGenerateColumns="False" Height="150" SelectedItem="{Binding SelectedCamera}">
+                        <DataGrid ItemsSource="{Binding ApplicationSettings.Cameras}" AutoGenerateColumns="False" Height="150" SelectedItem="{Binding SelectedCamera}" MouseDoubleClick="DataGrid_MouseDoubleClick">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Camera Index" Binding="{Binding CameraIndex}" Width="*"/>
                                 <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
-                                <DataGridTextColumn Header="Standard Image Path" Binding="{Binding StandardImagePath}" Width="2*"/>
+                                <DataGridTextColumn Header="Standard Image Path" Binding="{Binding StandardImages[0].FilePath}" Width="2*"/>
                             </DataGrid.Columns>
                         </DataGrid>
+
                         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                             <Button Content="Add Camera" Command="{Binding AddCameraCommand}" Width="100" Margin="0,0,10,0"/>
                             <Button Content="Remove Camera" Command="{Binding RemoveCameraCommand}" Width="100" Margin="0,0,10,0"/>

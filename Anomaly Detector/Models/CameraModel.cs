@@ -1,68 +1,89 @@
-﻿using System.ComponentModel;
-using System.Windows.Media;
+﻿using System;
+using System.ComponentModel;
 using System.Windows.Media.Imaging;
 
 namespace Anomaly_Detector.Models
 {
     /// <summary>
-    /// Represents a camera configuration, including properties such as the camera's index, 
-    /// IP address, port, description, threshold, and connection status.
-    /// It implements INotifyPropertyChanged to notify the UI of any property changes.
-    /// This class is used for managing individual camera configurations in the anomaly detection system.
+    /// Represents a camera configuration.
     /// </summary>
     public class CameraModel : INotifyPropertyChanged
     {
-        // Unique identifier for the camera, used to track each camera in the system
-        public int CameraIndex { get; set; }
-
-        // IP address of the camera, used for network communication
-        public string? IPAddress { get; set; }
-
-        // Port number for communication with the camera
-        public int? Port { get; set; }
-
-        // Description of the camera, usually shown in the UI
-        public string? Description { get; set; } = "New Camera";
-
-        // Property to store the threshold value for anomaly detection, 
-        // used to compare camera frames or sensor data for detecting anomalies
+        private string _filePath;
         private double _threshold;
-        public double Threshold
-        {
-            get => _threshold;
-            set { _threshold = value; OnPropertyChanged(nameof(Threshold)); }
-        }
-
-        // Flag to indicate whether the camera is currently connected or not
-        // This property helps the UI show the connection status of the camera
         private bool _isConnected;
-
-        
-
-        public bool IsConnected
-        {
-            get => _isConnected;
-            set { _isConnected = value; OnPropertyChanged(nameof(IsConnected)); }
-        }
 
         // Arrays of ImageModel objects for target and standard images
         public ImageModel[] TargetImages { get; set; }
         public ImageModel[] StandardImages { get; set; }
 
-        public CameraModel()
+        public int CameraIndex { get; set; }
+        public string? IPAddress { get; set; }
+        public int? Port { get; set; }
+        public string? Description { get; set; } = string.Empty;
+
+        // Threshold for anomaly detection (e.g., used for comparing frames)
+        public double Threshold
         {
-            TargetImages = new ImageModel[0];
-            StandardImages = new ImageModel[0];
+            get => _threshold;
+            set
+            {
+                _threshold = value;
+                OnPropertyChanged(nameof(Threshold));
+            }
         }
 
-        // Event to notify the UI about property changes, ensuring the UI is updated when properties change
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        // Method to raise the PropertyChanged event for a given property name
-        // This method ensures that when a property changes, the UI is notified and can refresh accordingly
-        protected void OnPropertyChanged(string propName)
+        // Connection status flag for the camera
+        public bool IsConnected
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+            get => _isConnected;
+            set
+            {
+                _isConnected = value;
+                OnPropertyChanged(nameof(IsConnected));
+            }
+        }
+
+        // Timestamp of when the camera or its images were captured or processed
+        public DateTime Timestamp { get; set; } = DateTime.Now;
+
+        // Event for property change notifications
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        // Method to trigger property change notifications
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        // Constructor to initialize CameraModel with empty arrays for target and standard images
+        public CameraModel()
+        {
+            TargetImages = new ImageModel[0]; // Empty array initially
+            StandardImages = new ImageModel[0]; // Empty array initially
+        }
+
+        // Add a target image to the TargetImages array
+        public void AddTargetImage(string filePath)
+        {
+            var imageModel = new ImageModel { FilePath = filePath };
+            //AddImageToArray(ref TargetImages, imageModel);
+        }
+
+        // Add a standard image to the StandardImages array
+        public void AddStandardImage(string filePath)
+        {
+            var imageModel = new ImageModel { FilePath = filePath };
+            //AddImageToArray(ref StandardImages, imageModel);
+        }
+
+        // Helper method to add an image to the image array
+        private void AddImageToArray(ref ImageModel[] imageArray, ImageModel imageModel)
+        {
+            var newArray = new ImageModel[imageArray.Length + 1];
+            Array.Copy(imageArray, newArray, imageArray.Length);
+            newArray[imageArray.Length] = imageModel;
+            imageArray = newArray;
         }
     }
 }
