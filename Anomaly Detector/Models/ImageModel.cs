@@ -28,7 +28,6 @@ namespace Anomaly_Detector.Models
             {
                 _filePath = value;
                 OnPropertyChanged(nameof(FilePath));
-                LoadImage(); // Automatically load image when file path is set
             }
         }
 
