@@ -17,7 +17,7 @@ namespace Anomaly_Detector.ViewModels
         /// Raises the PropertyChanged event.
         /// </summary>
         /// <param name="propertyName">The name of the property that changed. Automatically provided by the compiler if not specified.</param>
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

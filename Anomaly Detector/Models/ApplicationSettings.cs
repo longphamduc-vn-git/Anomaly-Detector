@@ -16,12 +16,6 @@ namespace Anomaly_Detector.Models
         /// Gets or sets the PLC configuration.
         /// </summary>
         public PLCModel PLCConfiguration { get; set; } = new PLCModel();
-
-        /// <summary>
-        /// Gets or sets the collection of registered PLC endpoints.
-        /// </summary>
-        public ObservableCollection<PLCEndpoint> PLCEndpoints { get; set; } = new ObservableCollection<PLCEndpoint>();
-
         /// <summary>
         /// Gets or sets the settings for image preprocessing.
         /// </summary>

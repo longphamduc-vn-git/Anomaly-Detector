@@ -16,15 +16,6 @@ namespace Anomaly_Detector.Views
             InitializeComponent();
         }
 
-        private void CameraItem_DoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            var selectedCamera = (CameraModel)((DataGrid)sender).SelectedItem;
-            if (selectedCamera != null)
-            {
-                // Open the camera screen (you can customize this to open the camera view)
-                var cameraWindow = new CameraWindow(selectedCamera);  // Assuming you have a CameraWindow
-                cameraWindow.Show();
-            }
-        }
+       
     }
 }

@@ -12,7 +12,7 @@ namespace Anomaly_Detector.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            string path = value as string;
+            string? path = value as string;
             if (string.IsNullOrEmpty(path))
                 return null;
             try

@@ -1,46 +1,24 @@
 ﻿using Anomaly_Detector.Models;
 using Anomaly_Detector.Services;
-using Anomaly_Detector.Views;
-using Emgu.CV;
-using Emgu.CV.Structure;
-using System;
+using Anomaly_Detector.ViewModels;  // Ensure this namespace is included
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
-using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using System.Windows;
+using Emgu.CV;
+using System.Collections.ObjectModel;  // Added to make sure ObservableCollection is used
 
 namespace Anomaly_Detector.ViewModels
 {
     public class SettingsViewModel : BaseViewModel
     {
+        #region Properties
+
+        // Property to store application settings (e.g., cameras, PLC endpoints, preprocessing steps)
         public ApplicationSettings ApplicationSettings { get; set; }
 
-        // Commands for managing cameras, PLC endpoints, and preprocessing steps.
-        public ICommand AddCameraCommand { get; set; }
-        public ICommand RegisterPLCEndpointsCommand { get; set; }
-        public ICommand AddPreprocessingStepCommand { get; set; }
-        public ICommand RemovePreprocessingStepCommand { get; set; }
-        public ICommand SortPreprocessingStepsCommand { get; set; }
-
-        // Commands for connectivity and image capture.
-        public ICommand CheckCameraConnectionCommand { get; set; }
-        public ICommand CheckPLCConnectionCommand { get; set; }
-        public ICommand CaptureStandardImageCommand { get; set; }
-        public ICommand SaveSettingsCommand { get; set; }
-        public ICommand SaveCapturedImageCommand { get; set; }
-        public ICommand DeleteCapturedImageCommand { get; set; }
-
-        private string? _capturedImagePath;
-
-        // Property to indicate connectivity.
-        private bool _cameraConnected;
-        public bool CameraConnected
-        {
-            get => _cameraConnected;
-            set { _cameraConnected = value; OnPropertyChanged(); }
-        }
+        // Connectivity status properties for camera and PLC
 
         private bool _plcConnected;
         public bool PLCConnected
@@ -49,131 +27,131 @@ namespace Anomaly_Detector.ViewModels
             set { _plcConnected = value; OnPropertyChanged(); }
         }
 
-        // Property to hold the captured image for display.
-        private BitmapSource? _capturedImage; // Make nullable
+        // Property to store the captured image
+        private BitmapSource? _capturedImage;
         public BitmapSource? CapturedImage
         {
             get => _capturedImage;
             set { _capturedImage = value; OnPropertyChanged(); }
         }
 
-
-        // Property to control visibility of the Capture Standard Image button.
+        // Control visibility of the capture button
         private bool _showCaptureButton;
         public bool ShowCaptureButton
         {
             get => _showCaptureButton;
             set { _showCaptureButton = value; OnPropertyChanged(); }
         }
+        private CameraModel _selectedCamera;
+        public CameraModel? SelectedCamera
+        {
+            get => _selectedCamera;
+            set
+            {
+                _selectedCamera = value;
+                OnPropertyChanged();
+            }
+        }
 
-        // Initializes a new instance of the SettingsViewModel class.
+        #endregion
+
+        #region Commands
+
+        // Commands for managing cameras, PLC endpoints, and preprocessing steps.
+        public ICommand AddCameraCommand { get; set; }
+        public ICommand RemoveCameraCommand { get; set; }
+        public ICommand RegisterPLCEndpointsCommand { get; set; }
+        public ICommand AddPreprocessingStepCommand { get; set; }
+        public ICommand RemovePreprocessingStepCommand { get; set; }
+        public ICommand SortPreprocessingStepsCommand { get; set; }
+
+        // Commands for connectivity checks and image capture functionalities.
+        public ICommand CheckCameraConnectionCommand { get; set; }
+        public ICommand CheckPLCConnectionCommand { get; set; }
+        public ICommand CaptureStandardImageCommand { get; set; }
+        public ICommand SaveSettingsCommand { get; set; }
+        public ICommand SaveCapturedImageCommand { get; set; }
+        public ICommand DeleteCapturedImageCommand { get; set; }
+
+        #endregion
+
+        #region Constructor
+
+        // Constructor: Initializes settings and commands for UI interaction
         public SettingsViewModel()
         {
-            ApplicationSettings = LoadSettings();  // Load saved settings
-
-            // Other initialization code...
+            ApplicationSettings = LoadSettings(); // Load saved settings from a file
             ApplicationSettings.Cameras.CollectionChanged += Cameras_CollectionChanged;
 
-            // Initialize commands
+            // Initialize commands to handle user actions
+            InitializeCommands();
+        }
+
+        #endregion
+
+        #region Methods
+
+        // Load settings from the JSON file, or return default if none found
+        private ApplicationSettings LoadSettings()
+        {
+            var jsonService = new JsonDatabaseService<ApplicationSettings>("settings.json");
+            return jsonService.LoadData() ?? new ApplicationSettings();  // Default settings if not found
+        }
+
+        // Initialize commands that will bind to UI controls like buttons and menus
+        private void InitializeCommands()
+        {
             AddCameraCommand = new RelayCommand(AddCamera);
-            RegisterPLCEndpointsCommand = new RelayCommand(RegisterPLCEndpoints);
+            RemoveCameraCommand = new RelayCommand(RemoveCamera);
             AddPreprocessingStepCommand = new RelayCommand(AddPreprocessingStep);
             RemovePreprocessingStepCommand = new RelayCommand(RemovePreprocessingStep);
             SortPreprocessingStepsCommand = new RelayCommand(SortPreprocessingSteps);
             CheckCameraConnectionCommand = new RelayCommand(CheckCameraConnection);
             CheckPLCConnectionCommand = new RelayCommand(CheckPLCConnection);
             SaveSettingsCommand = new RelayCommand(SaveSettings);
-            // Initialize Commands
-            CaptureStandardImageCommand = new RelayCommand(CaptureStandardImage);
-            SaveCapturedImageCommand = new RelayCommand(SaveCapturedImage);
-            DeleteCapturedImageCommand = new RelayCommand(DeleteCapturedImage);
-
-
         }
 
-        private ApplicationSettings LoadSettings()
-        {
-            var jsonService = new JsonDatabaseService<ApplicationSettings>("settings.json");
-            return jsonService.LoadData() ?? new ApplicationSettings();  // Return default if no saved settings found
-        }
-
-        // Handles changes in the camera collection.
+        // Event handler for camera collection changes (e.g., adding/removing cameras)
         private void Cameras_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            if (e.NewItems != null)
-            {
-                foreach (CameraModel cam in e.NewItems)
-                {
-                    if (cam is INotifyPropertyChanged notifier)
-                    {
-                        notifier.PropertyChanged += (s, ev) =>
-                        {
-                            //if (ApplicationSettings.Cameras.Count > 0 && ApplicationSettings.Cameras[0] == cam)
-                                //CheckCameraConnection(null);
-                        };
-                    }
-                }
-            }
+            // Update UI when the camera collection changes
+            OnPropertyChanged(nameof(ApplicationSettings.Cameras)); // Notify UI about the change
         }
 
-        // Adds a new camera to the list.
+        #endregion
+
+        #region Camera Management
+
+        // Add a new camera to the collection
         private void AddCamera(object parameter)
         {
             var newCamera = new CameraModel
             {
-                CameraIndex = ApplicationSettings.Cameras.Count,
-                Description = "New Camera"
+                CameraIndex = ApplicationSettings.Cameras.Count
             };
             ApplicationSettings.Cameras.Add(newCamera);
-            //if (ApplicationSettings.Cameras.Count == 1)
-            //    CheckCameraConnection(null);
         }
 
-        // Registers new PLC endpoints.
-        private void RegisterPLCEndpoints(object parameter)
+        // Remove a selected camera from the collection
+        private void RemoveCamera(object parameter)
         {
-            ApplicationSettings.PLCEndpoints.Add(new PLCEndpoint
+            if (SelectedCamera != null)
             {
-                Name = "Endpoint " + (ApplicationSettings.PLCEndpoints.Count + 1),
-                RegisterAddress = 100
-            });
-        }
-
-        // Adds a preprocessing step.
-        private void AddPreprocessingStep(object parameter)
-        {
-            int order = ApplicationSettings.PreprocessingSteps.Count + 1;
-            ApplicationSettings.PreprocessingSteps.Add(new PreprocessingStep
+                ApplicationSettings.Cameras.Remove(SelectedCamera);
+                SelectedCamera = null; // Reset selection
+                OnPropertyChanged(nameof(ApplicationSettings.Cameras));
+            }
+            else
             {
-                Order = order,
-                StepName = "New Step",
-                Parameters = ""
-            });
-        }
-
-        // Removes the last preprocessing step.
-        private void RemovePreprocessingStep(object parameter)
-        {
-            if (ApplicationSettings.PreprocessingSteps.Count > 0)
-            {
-                ApplicationSettings.PreprocessingSteps.RemoveAt(ApplicationSettings.PreprocessingSteps.Count - 1);
+                MessageBox.Show("Please select a camera to remove.");
             }
         }
 
-        // Sorts preprocessing steps by their order.
-        private void SortPreprocessingSteps(object parameter)
-        {
-            var sorted = new System.Collections.Generic.List<PreprocessingStep>(ApplicationSettings.PreprocessingSteps);
-            sorted.Sort((x, y) => x.Order.CompareTo(y.Order));
-            ApplicationSettings.PreprocessingSteps.Clear();
-            foreach (var step in sorted)
-            {
-                ApplicationSettings.PreprocessingSteps.Add(step);
-            }
-        }
+        #endregion
 
-        // Checks the connectivity of the first configured camera.
-        // Kiểm tra kết nối camera bất đồng bộ
+        #region Camera and PLC Connectivity
+
+        // Asynchronous method to check camera connectivity by capturing a frame
         private async void CheckCameraConnection(object parameter)
         {
             foreach (var camera in ApplicationSettings.Cameras)
@@ -183,23 +161,20 @@ namespace Anomaly_Detector.ViewModels
                     using (var cameraService = new CameraService(camera.CameraIndex))
                     {
                         var frame = await Task.Run(() => cameraService.GetCurrentFrame());
-                        // Cập nhật UI qua Dispatcher
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             camera.IsConnected = (frame != null);
-                            camera.ConnectionColor = (frame != null) ? "Green" : "Gray";
                         });
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Lỗi camera {camera.CameraIndex}: {ex.Message}");
+                    MessageBox.Show($"Error with camera {camera.CameraIndex}: {ex.Message}");
                 }
             }
         }
 
-
-        // Checks the connectivity of the PLC by attempting to read a register.
+        // Check PLC connection by attempting to read data from a PLC register
         private void CheckPLCConnection(object parameter)
         {
             try
@@ -217,7 +192,45 @@ namespace Anomaly_Detector.ViewModels
             }
         }
 
-        // Saves the current application settings to a JSON file.
+        #endregion
+
+        
+        #region Preprocessing and Settings Management
+
+        // Add a new preprocessing step to the list
+        private void AddPreprocessingStep(object parameter)
+        {
+            int order = ApplicationSettings.PreprocessingSteps.Count + 1;
+            ApplicationSettings.PreprocessingSteps.Add(new PreprocessingStep
+            {
+                Order = order,
+                StepName = "New Step",
+                Parameters = ""
+            });
+        }
+
+        // Remove the last preprocessing step from the list
+        private void RemovePreprocessingStep(object parameter)
+        {
+            if (ApplicationSettings.PreprocessingSteps.Count > 0)
+            {
+                ApplicationSettings.PreprocessingSteps.RemoveAt(ApplicationSettings.PreprocessingSteps.Count - 1);
+            }
+        }
+
+        // Sort preprocessing steps by their defined order
+        private void SortPreprocessingSteps(object parameter)
+        {
+            var sorted = ApplicationSettings.PreprocessingSteps.OrderBy(step => step.Order).ToList();
+            ApplicationSettings.PreprocessingSteps.Clear();
+            // Add items individually to ObservableCollection
+            foreach (var step in sorted)
+            {
+                ApplicationSettings.PreprocessingSteps.Add(step);
+            }
+        }
+
+        // Save the current application settings to a JSON file
         private void SaveSettings(object parameter)
         {
             try
@@ -230,120 +243,7 @@ namespace Anomaly_Detector.ViewModels
                 MessageBox.Show($"Error saving settings: {ex.Message}");
             }
         }
-        private async void CaptureStandardImage(object parameter)
-        {
-            // Get the selected camera from the parameter
-            if (parameter is CameraModel selectedCamera)
-            {
-                if (string.IsNullOrEmpty(ApplicationSettings.ImageStoragePath) || !Directory.Exists(ApplicationSettings.ImageStoragePath))
-                {
-                    MessageBox.Show("Invalid Image Storage Path");
-                    return;
-                }
 
-                string directoryPath = Path.Combine(ApplicationSettings.ImageStoragePath, "Standard");
-                Directory.CreateDirectory(directoryPath); // Ensure the directory exists
-
-                try
-                {
-                    // Capture image from the selected camera
-                    using (var cameraService = new CameraService(selectedCamera.CameraIndex))  // Use CameraIndex from selected camera
-                    {
-                        var frame = await Task.Run(() => cameraService.GetCurrentFrame());
-                        if (frame != null)
-                        {
-                            // Convert captured frame to BitmapSource
-                            CapturedImage = frame.ToBitmapSource();
-
-                            // Save the captured image
-                            string imagePath = Path.Combine(directoryPath, "StandardImage.jpg");
-                            frame.Save(imagePath);  // Save the image to disk
-
-                            // Update the StandardImagePath for the selected camera
-                            selectedCamera.StandardImagePath = imagePath;
-                            MessageBox.Show("Image captured and saved successfully.");
-                        }
-                        else
-                        {
-                            MessageBox.Show("Failed to capture image.");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error capturing image: {ex.Message}");
-                }
-            }
-        }
-
-        private void SaveCapturedImage(object parameter)
-        {
-            if (parameter is CameraModel selectedCamera && !string.IsNullOrEmpty(selectedCamera.StandardImagePath))
-            {
-                try
-                {
-                    // Update the StandardImagePath for the selected camera
-                    selectedCamera.StandardImagePath = selectedCamera.StandardImagePath;
-                    MessageBox.Show("Image path updated successfully.");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error saving image path: {ex.Message}");
-                }
-            }
-            else
-            {
-                MessageBox.Show("No image captured or path not set.");
-            }
-        }
-
-        private void DeleteCapturedImage(object parameter)
-        {
-            if (parameter is CameraModel selectedCamera && !string.IsNullOrEmpty(selectedCamera.StandardImagePath))
-            {
-                try
-                {
-                    if (File.Exists(selectedCamera.StandardImagePath))
-                    {
-                        File.Delete(selectedCamera.StandardImagePath);
-                        selectedCamera.StandardImagePath = string.Empty; // Clear the path after deletion
-                        MessageBox.Show("Image deleted.");
-                        CapturedImage = null; // Clear the displayed image
-                    }
-                    else
-                    {
-                        MessageBox.Show("No image to delete.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error deleting image: {ex.Message}");
-                }
-            }
-            else
-            {
-                MessageBox.Show("No image captured.");
-            }
-        }
-        private CameraModel _selectedCamera;
-        public CameraModel SelectedCamera
-        {
-            get => _selectedCamera;
-            set
-            {
-                _selectedCamera = value;
-                OnPropertyChanged();
-            }
-        }
-
-        // When loading settings or saving updates, make sure the StandardImagePath is properly updated.
-        public void UpdateStandardImagePath(string path)
-        {
-            SelectedCamera.StandardImagePath = path;
-            var jsonService = new JsonDatabaseService<ApplicationSettings>("settings.json");
-            jsonService.SaveData(ApplicationSettings);  // Save the updated settings
-        }
-
-
+        #endregion
     }
 }
