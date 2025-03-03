@@ -32,7 +32,7 @@ namespace Anomaly_Detector.ViewModels
         /// </summary>
         /// <param name="parameter">Data used by the command. If the command does not require data, this object can be set to null.</param>
         /// <returns>true if this command can be executed; otherwise, false.</returns>
-        public bool CanExecute(object parameter)
+        public bool CanExecute(object? parameter)
         {
             return _canExecute == null || _canExecute(parameter);
         }
@@ -41,7 +41,7 @@ namespace Anomaly_Detector.ViewModels
         /// Executes the command.
         /// </summary>
         /// <param name="parameter">Data used by the command.</param>
-        public void Execute(object parameter)
+        public void Execute(object? parameter)
         {
             _execute(parameter);
         }

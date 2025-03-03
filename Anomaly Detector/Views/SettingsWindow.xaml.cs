@@ -1,16 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using Anomaly_Detector.Models;
 
 namespace Anomaly_Detector.Views
@@ -27,13 +18,13 @@ namespace Anomaly_Detector.Views
 
         private void CameraItem_DoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if (sender is GroupBox groupBox && groupBox.DataContext is CameraModel camera)
+            var selectedCamera = (CameraModel)((DataGrid)sender).SelectedItem;
+            if (selectedCamera != null)
             {
-                // Mở CameraWindow và truyền thông tin của camera đã được chọn
-                CameraWindow cameraWindow = new CameraWindow(camera);
-                cameraWindow.ShowDialog(); // Mở cửa sổ CameraWindow
+                // Open the camera screen (you can customize this to open the camera view)
+                var cameraWindow = new CameraWindow(selectedCamera);  // Assuming you have a CameraWindow
+                cameraWindow.Show();
             }
         }
-
     }
 }

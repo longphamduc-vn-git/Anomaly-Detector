@@ -12,7 +12,8 @@ namespace Anomaly_Detector.Models
         public int CameraIndex { get; set; }
         public string? IPAddress { get; set; }
         public int? Port { get; set; }
-        public string? Description { get; set; }
+        public string? Description { get; set; } = string.Empty;
+
         public string StandardImagePath { get; set; } = string.Empty;
 
         private BitmapSource _standardImage;
@@ -22,8 +23,8 @@ namespace Anomaly_Detector.Models
             set { _standardImage = value; OnPropertyChanged(nameof(StandardImage)); }
         }
 
-        private BitmapSource _targetImage;
-        public BitmapSource TargetImage
+        private BitmapSource? _targetImage;
+        public BitmapSource? TargetImage
         {
             get => _targetImage;
             set { _targetImage = value; OnPropertyChanged(nameof(TargetImage)); }
@@ -36,8 +37,8 @@ namespace Anomaly_Detector.Models
             set { _threshold = value; OnPropertyChanged(nameof(Threshold)); }
         }
 
-        private string _comparisonMessage;
-        public string ComparisonMessage
+        private string? _comparisonMessage;
+        public string? ComparisonMessage
         {
             get => _comparisonMessage;
             set { _comparisonMessage = value; OnPropertyChanged(nameof(ComparisonMessage)); }

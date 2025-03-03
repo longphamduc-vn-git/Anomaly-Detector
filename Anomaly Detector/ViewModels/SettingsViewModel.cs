@@ -1,9 +1,11 @@
 ﻿using Anomaly_Detector.Models;
 using Anomaly_Detector.Services;
+using Anomaly_Detector.Views;
 using Emgu.CV;
 using Emgu.CV.Structure;
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -27,7 +29,10 @@ namespace Anomaly_Detector.ViewModels
         public ICommand CheckPLCConnectionCommand { get; set; }
         public ICommand CaptureStandardImageCommand { get; set; }
         public ICommand SaveSettingsCommand { get; set; }
+        public ICommand SaveCapturedImageCommand { get; set; }
+        public ICommand DeleteCapturedImageCommand { get; set; }
 
+        private string? _capturedImagePath;
 
         // Property to indicate connectivity.
         private bool _cameraConnected;
@@ -45,12 +50,13 @@ namespace Anomaly_Detector.ViewModels
         }
 
         // Property to hold the captured image for display.
-        private BitmapSource _capturedImage;
-        public BitmapSource CapturedImage
+        private BitmapSource? _capturedImage; // Make nullable
+        public BitmapSource? CapturedImage
         {
             get => _capturedImage;
             set { _capturedImage = value; OnPropertyChanged(); }
         }
+
 
         // Property to control visibility of the Capture Standard Image button.
         private bool _showCaptureButton;
@@ -77,6 +83,11 @@ namespace Anomaly_Detector.ViewModels
             CheckCameraConnectionCommand = new RelayCommand(CheckCameraConnection);
             CheckPLCConnectionCommand = new RelayCommand(CheckPLCConnection);
             SaveSettingsCommand = new RelayCommand(SaveSettings);
+            // Initialize Commands
+            CaptureStandardImageCommand = new RelayCommand(CaptureStandardImage);
+            SaveCapturedImageCommand = new RelayCommand(SaveCapturedImage);
+            DeleteCapturedImageCommand = new RelayCommand(DeleteCapturedImage);
+
 
         }
 
@@ -87,7 +98,7 @@ namespace Anomaly_Detector.ViewModels
         }
 
         // Handles changes in the camera collection.
-        private void Cameras_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        private void Cameras_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             if (e.NewItems != null)
             {
@@ -219,5 +230,120 @@ namespace Anomaly_Detector.ViewModels
                 MessageBox.Show($"Error saving settings: {ex.Message}");
             }
         }
+        private async void CaptureStandardImage(object parameter)
+        {
+            // Get the selected camera from the parameter
+            if (parameter is CameraModel selectedCamera)
+            {
+                if (string.IsNullOrEmpty(ApplicationSettings.ImageStoragePath) || !Directory.Exists(ApplicationSettings.ImageStoragePath))
+                {
+                    MessageBox.Show("Invalid Image Storage Path");
+                    return;
+                }
+
+                string directoryPath = Path.Combine(ApplicationSettings.ImageStoragePath, "Standard");
+                Directory.CreateDirectory(directoryPath); // Ensure the directory exists
+
+                try
+                {
+                    // Capture image from the selected camera
+                    using (var cameraService = new CameraService(selectedCamera.CameraIndex))  // Use CameraIndex from selected camera
+                    {
+                        var frame = await Task.Run(() => cameraService.GetCurrentFrame());
+                        if (frame != null)
+                        {
+                            // Convert captured frame to BitmapSource
+                            CapturedImage = frame.ToBitmapSource();
+
+                            // Save the captured image
+                            string imagePath = Path.Combine(directoryPath, "StandardImage.jpg");
+                            frame.Save(imagePath);  // Save the image to disk
+
+                            // Update the StandardImagePath for the selected camera
+                            selectedCamera.StandardImagePath = imagePath;
+                            MessageBox.Show("Image captured and saved successfully.");
+                        }
+                        else
+                        {
+                            MessageBox.Show("Failed to capture image.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error capturing image: {ex.Message}");
+                }
+            }
+        }
+
+        private void SaveCapturedImage(object parameter)
+        {
+            if (parameter is CameraModel selectedCamera && !string.IsNullOrEmpty(selectedCamera.StandardImagePath))
+            {
+                try
+                {
+                    // Update the StandardImagePath for the selected camera
+                    selectedCamera.StandardImagePath = selectedCamera.StandardImagePath;
+                    MessageBox.Show("Image path updated successfully.");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error saving image path: {ex.Message}");
+                }
+            }
+            else
+            {
+                MessageBox.Show("No image captured or path not set.");
+            }
+        }
+
+        private void DeleteCapturedImage(object parameter)
+        {
+            if (parameter is CameraModel selectedCamera && !string.IsNullOrEmpty(selectedCamera.StandardImagePath))
+            {
+                try
+                {
+                    if (File.Exists(selectedCamera.StandardImagePath))
+                    {
+                        File.Delete(selectedCamera.StandardImagePath);
+                        selectedCamera.StandardImagePath = string.Empty; // Clear the path after deletion
+                        MessageBox.Show("Image deleted.");
+                        CapturedImage = null; // Clear the displayed image
+                    }
+                    else
+                    {
+                        MessageBox.Show("No image to delete.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error deleting image: {ex.Message}");
+                }
+            }
+            else
+            {
+                MessageBox.Show("No image captured.");
+            }
+        }
+        private CameraModel _selectedCamera;
+        public CameraModel SelectedCamera
+        {
+            get => _selectedCamera;
+            set
+            {
+                _selectedCamera = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // When loading settings or saving updates, make sure the StandardImagePath is properly updated.
+        public void UpdateStandardImagePath(string path)
+        {
+            SelectedCamera.StandardImagePath = path;
+            var jsonService = new JsonDatabaseService<ApplicationSettings>("settings.json");
+            jsonService.SaveData(ApplicationSettings);  // Save the updated settings
+        }
+
+
     }
 }

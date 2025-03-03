@@ -12,7 +12,7 @@
             <TabItem Header="Cameras">
                 <Grid Margin="10">
                     <StackPanel>
-                        <DataGrid ItemsSource="{Binding ApplicationSettings.Cameras}" AutoGenerateColumns="False" Height="150"  MouseDoubleClick="CameraItem_DoubleClick"  >
+                        <DataGrid ItemsSource="{Binding ApplicationSettings.Cameras}" AutoGenerateColumns="False" Height="150" MouseDoubleClick="CameraItem_DoubleClick">
                             <DataGrid.Resources>
                                 <Style TargetType="DataGridRow">
                                     <Setter Property="Background" Value="{Binding ConnectionColor}"/>
@@ -30,15 +30,12 @@
                             <Button Content="Add Camera" Command="{Binding AddCameraCommand}" Width="100" Margin="0,0,10,0"/>
                             <Button Content="Remove Camera" Width="100" Margin="0,0,10,0"/>
                             <Button Content="Check Camera" Command="{Binding CheckCameraConnectionCommand}" Width="100" Margin="0,0,10,0"/>
-                            <Button Content="Capture Standard Image" Command="{Binding CaptureStandardImageCommand}" Width="150"/>
                         </StackPanel>
-
-                        <!-- Display captured image -->
                     </StackPanel>
                 </Grid>
             </TabItem>
 
-            <!-- PLC Tab (unchanged) -->
+            <!-- PLC Tab -->
             <TabItem Header="PLC">
                 <Grid Margin="10">
                     <StackPanel>
@@ -50,21 +47,18 @@
                         <TextBox Text="{Binding ApplicationSettings.PLCConfiguration.UnitID}" Width="200"/>
                         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                             <Button Content="Register PLC Endpoints" Command="{Binding RegisterPLCEndpointsCommand}" Width="200" Margin="0,0,10,0"/>
-                            <Button Content="Register PLC Startpoints" Command="{Binding CheckPLCConnectionCommand}" Width="200"/>
                             <Button Content="Check PLC" Command="{Binding CheckPLCConnectionCommand}" Width="200"/>
-
                         </StackPanel>
                     </StackPanel>
                 </Grid>
             </TabItem>
 
-            <!-- Image Processing Tab (unchanged) -->
+            <!-- Image Processing Tab -->
             <TabItem Header="Image Processing">
                 <Grid Margin="10">
                     <StackPanel>
                         <TextBlock Text="Image Storage Path:"/>
                         <TextBox Text="{Binding ApplicationSettings.ImageStoragePath}" Width="300"/>
-                        <StackPanel Orientation="Horizontal"/>
                         <GroupBox Header="Preprocessing Steps" Margin="0,20,0,0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -81,8 +75,7 @@
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,160,0,0" Grid.Column="1">
                                     <Button Content="Add Step" Command="{Binding AddPreprocessingStepCommand}" Margin="5"/>
                                     <Button Content="Remove Step" Command="{Binding RemovePreprocessingStepCommand}" Margin="5"/>
-                                    <Button Content="Previous" Margin="5"/>
-                                    <Button Content="Next" Margin="5"/>
+                                    <Button Content="Sort Steps" Command="{Binding SortPreprocessingStepsCommand}" Margin="5"/>
                                 </StackPanel>
                             </Grid>
                         </GroupBox>
