@@ -76,25 +76,7 @@ namespace Anomaly_Detector.ViewModels
 
 
 
-        private void SaveImageSourceToFile(ImageSource imageSource, string filePath)
-        {
-            // Ensure the image source is a BitmapSource
-            BitmapSource bitmapSource = imageSource as BitmapSource;
-            if (bitmapSource == null)
-            {
-                throw new ArgumentException("The provided ImageSource is not a BitmapSource.");
-            }
 
-            // Encode the image to the desired format (e.g., PNG)
-            BitmapEncoder encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
-
-            // Save the image to the specified file path
-            using (FileStream fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                encoder.Save(fileStream);
-            }
-        }
 
 
         private async void StartCameraFeed()
@@ -103,10 +85,13 @@ namespace Anomaly_Detector.ViewModels
             {
                 if (!_isCaptured)
                 {
-                    var frame = await Task.Run(() => _cameraService.GetCurrentFrame());
+                    Image<Bgr, byte>? frame = await Task.Run(() => _cameraService.GetCurrentFrame());
                     if (frame != null)
                     {
+                        string CapturedImagePath = $"{ApplicationSettings.ImageStoragePath}\\{_camera.Description}_{DateTime.Now.Ticks}.jpg";
+
                         CameraFeedImage = frame.ToBitmapSource();
+                        frame.ToUMat().ToImage<Bgr, byte>().Save(CapturedImagePath);
                     }
                 }
                 await Task.Delay(100);
@@ -116,9 +101,6 @@ namespace Anomaly_Detector.ViewModels
         private void CaptureImage(object parameter)
         {
             _isCaptured = true;
-            string CapturedImagePath = $"{ApplicationSettings.ImageStoragePath}\\{_camera.Description}_{DateTime.Now.Ticks}.jpg";
-            SaveImageSourceToFile(CameraFeedImage, CapturedImagePath);
-            _isCaptured = false;
         }
 
         private void DeleteImage(object parameter)
